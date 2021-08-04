@@ -73,7 +73,13 @@ class Scanner {
             case '-': addToken(MINUS); break;
             case '+': addToken(PLUS); break;
             case ';': addToken(SEMICOLON); break;
-            case '*': addToken(STAR); break;
+            case '*':
+                if (match('/')) {
+                    Lox.error(line, "No beginning for block comment.");
+                } else {
+                    addToken(STAR);
+                }
+                break;
 
             // handle possible two character lexemes
             case '!':
@@ -94,6 +100,9 @@ class Scanner {
                 if (match('/')) {
                     // A comment goes until the end of the line
                     while (peek() != '\n' && !isAtEnd()) advance();
+                } else if (match('*')) {
+                    // Handle C-style block comments
+                    blockComment();
                 } else {
                     addToken(SLASH);
                 }
@@ -130,6 +139,30 @@ class Scanner {
     }
 
     // Helper methods
+    private void blockComment() {
+        int origLine = line;
+        while (!isAtEnd() && !(peek() == '*' && peekNext() == '/')) {
+            if (peek() == '\n') line++;
+            advance();
+
+            if (isAtEnd()) {
+                break;
+            }
+
+            if (peek() == '/' && peekNext() == '*') {
+                blockComment();
+            }
+        }
+
+        for (int i = 0; i < 2; ++i) {
+            if (isAtEnd()) {
+                Lox.error(origLine, "Unterminated block comment");
+                break;
+            }
+            else advance();
+        }
+    }
+
     private void identifier() {
         while (isAlphaNumeric(peek())) advance();
 
